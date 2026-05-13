@@ -26,6 +26,7 @@ Aplikasi mobile untuk katalog makanan dengan fitur keranjang belanja, autentikas
 | Icons | React Native Vector Icons |
 
 ## 📁 Struktur Proyek
+```
 FlavorDash/
 ├── app/ # Screens dan navigasi
 │ ├── _layout.tsx # Tab navigation & header
@@ -42,34 +43,35 @@ FlavorDash/
 ├── context/ # AuthContext (global state)
 ├── types/ # TypeScript interfaces
 └── assets/ # Assets (icon, splash)
-
+```
 
 ## 🚀 Cara Menjalankan
 
-### 1. Jalankan Backend
+### 1. Setting IP Address
+
+Ganti API_URL di context/AuthContext.tsx dengan IP laptop Anda.
+
+### 2. Database
+
+- Buat database MySQL flavordash_db
+- file database di /database/flavordash_db.sql
+
+### 3. Jalankan Backend
+
+Jalankan script SQL di backend/server.js (auto setup)
 ```bash
 cd backend
 npm install
 npm run dev
 ```
 
-### 2. Jalankan Backend
+### 4. Jalankan Aplikasi
 ```bash
 npm install
 npx expo start -c
 ```
 
-### 3. Setting IP Address
-
-Ganti API_URL di context/AuthContext.tsx dengan IP laptop Anda.
-
-### 4. Database
-
-Buat database MySQL flavordash_db
-file database di /database/flavordash_db.sql
-Jalankan script SQL di backend/server.js (auto setup)
-
 ### 5. Demo Login
 
-Email    : user@example.com
-Password : password123
+- Email    : user@example.com
+- Password : password123
