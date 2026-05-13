@@ -1,50 +1,75 @@
-# Welcome to your Expo app 👋
+# 🍽️ FlavorDash - Aplikasi Katalog Makanan
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplikasi mobile untuk katalog makanan dengan fitur keranjang belanja, autentikasi JWT, dan database MySQL.
 
-## Get started
+## ✨ Fitur
 
-1. Install dependencies
+- ✅ **Layout Flexbox** - Gambar produk di samping deskripsi dengan unit proporsional (flex:1)
+- ✅ **Responsivitas** - Mendukung berbagai ukuran layar (fragmentasi Android & iOS)
+- ✅ **JWT Authentication** - Stateless authentication dengan access token & refresh token
+- ✅ **Route Protection** - Halaman detail pesanan hanya bisa diakses setelah login
+- ✅ **Keranjang Belanja** - Tambah, hapus, update quantity produk
+- ✅ **Checkout** - Pilihan pembayaran transfer bank atau COD
+- ✅ **Auto Refresh** - Cart count di header otomatis update
+- ✅ **User Profile** - Dropdown menu untuk profil dan logout
+- ✅ **Full Screen Support** - SafeAreaView untuk notch dan gesture navigation
 
-   ```bash
-   npm install
-   ```
+## 🛠️ Teknologi
 
-2. Start the app
+| Stack | Teknologi |
+|-------|-----------|
+| Frontend | React Native + Expo |
+| Backend | Express.js |
+| Database | MySQL |
+| Authentication | JWT (JSON Web Token) |
+| Storage | SecureStore (Native), AsyncStorage (Web) |
+| Icons | React Native Vector Icons |
 
-   ```bash
-   npx expo start
-   ```
+## 📁 Struktur Proyek
+FlavorDash/
+├── app/ # Screens dan navigasi
+│ ├── _layout.tsx # Tab navigation & header
+│ ├── index.tsx # Halaman katalog
+│ ├── cart.tsx # Halaman keranjang
+│ ├── login.tsx # Login/Register
+│ ├── profile.tsx # Profil user
+│ ├── orders.tsx # Riwayat pesanan
+│ └── detail/[id].tsx # Detail pesanan
+├── backend/ # Express.js server
+│ ├── server.js # API endpoints
+│ ├── uploads/ # Gambar produk
+│ └── .env # Konfigurasi
+├── context/ # AuthContext (global state)
+├── types/ # TypeScript interfaces
+└── assets/ # Assets (icon, splash)
 
-In the output, you'll find options to open the app in a
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🚀 Cara Menjalankan
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### 1. Jalankan Backend
 ```bash
-npm run reset-project
+cd backend
+npm install
+npm run dev
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Jalankan Backend
+```bash
+npm install
+npx expo start -c
+```
 
-## Learn more
+### 3. Setting IP Address
 
-To learn more about developing your project with Expo, look at the following resources:
+Ganti API_URL di context/AuthContext.tsx dengan IP laptop Anda.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 4. Database
 
-## Join the community
+Buat database MySQL flavordash_db
+file database di /database/flavordash_db.sql
+Jalankan script SQL di backend/server.js (auto setup)
 
-Join our community of developers creating universal apps.
+### 5. Demo Login
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Email    : user@example.com
+Password : password123
