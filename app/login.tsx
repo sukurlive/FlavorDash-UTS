@@ -8,8 +8,8 @@ import { useAuth } from '../context/AuthContext';
 export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('user@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register, isAuthenticated, user } = useAuth();
   const router = useRouter();
@@ -87,8 +87,6 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>{isLogin ? 'Login' : 'Register'}</Text>
           </TouchableOpacity>
         )}
-        
-        <Text style={styles.demo}>{isLogin ? 'Demo: user@example.com / password123' : 'Minimal password 6 karakter'}</Text>
       </ScrollView>
     </SafeAreaView>
   );

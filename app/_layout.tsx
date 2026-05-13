@@ -132,8 +132,6 @@ function HomeHeader() {
 }
 
 function RootLayoutContent() {
-  const insets = useSafeAreaInsets();
-  
   return (
     <View style={{ flex: 1 }}>
       <Tabs
@@ -164,7 +162,7 @@ function RootLayoutContent() {
           }}
         />
         
-        {/* TAB 2: PRODUCTS */}
+        {/* TAB 2: MENU (PRODUK) */}
         <Tabs.Screen
           name="products"
           options={{
@@ -173,28 +171,23 @@ function RootLayoutContent() {
             headerTitle: () => <HomeHeader />,
           }}
         />
-        
-        {/* TAB 3: CART (sembunyikan dari tab bar karena sudah di header) */}
-        <Tabs.Screen
-          name="cart"
-          options={{
-            href: null,
-            headerTitle: 'Keranjang Belanja',
-          }}
-        />
-        
-        {/* TAB 4: PROFILE (sembunyikan dari tab bar, akses via dropdown) */}
+
+        {/* TAB 3: PROFILE */}
         <Tabs.Screen
           name="profile"
           options={{
-            href: null,
-            headerTitle: 'Profil Saya',
+            title: 'Profile',
+            tabBarIcon: ({ color, size }) => <Icon name="person" size={size} color={color} />,
+            headerTitle: () => <HomeHeader />,
           }}
         />
         
-        {/* Halaman lainnya */}
+        {/* HIDDEN TABS (tidak muncul di footer) */}
+        <Tabs.Screen name="cart" options={{ href: null, headerTitle: 'Keranjang Belanja' }} />
         <Tabs.Screen name="login" options={{ href: null, headerTitle: 'Login' }} />
         <Tabs.Screen name="orders" options={{ href: null, headerTitle: 'Pesanan Saya' }} />
+        <Tabs.Screen name="edit-profile" options={{ href: null, headerTitle: 'Edit Profil' }} />
+        <Tabs.Screen name="addresses" options={{ href: null, headerTitle: 'Alamat Saya' }} />
         <Tabs.Screen name="detail/[id]" options={{ href: null, headerTitle: 'Detail Pesanan' }} />
       </Tabs>
     </View>

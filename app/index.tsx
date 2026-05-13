@@ -54,7 +54,6 @@ export default function HomeScreen() {
 
       {/* Fitur Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>✨ Fitur Unggulan</Text>
         <View style={styles.featuresGrid}>
           {features.map((feature, index) => (
             <View key={index} style={styles.featureCard}>
@@ -88,7 +87,7 @@ export default function HomeScreen() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2026 FlavorDash</Text>
+        <Text style={styles.footerText}>© 2026 FlavorDash by SUKUR 411231087</Text>
         <Text style={styles.footerSubText}>Aplikasi Katalog Makanan</Text>
       </View>
     </ScrollView>
@@ -102,7 +101,7 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     backgroundColor: '#FFF',
-    paddingTop: 30,
+    paddingTop: 0,
     paddingBottom: 24,
     paddingHorizontal: 24,
     alignItems: 'center',

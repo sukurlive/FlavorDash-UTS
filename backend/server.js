@@ -156,6 +156,7 @@ async function setupDatabase() {
     }
 }
 
+// API Auth
 app.post('/api/register', async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
@@ -222,7 +223,200 @@ app.post('/api/logout', verifyAccessToken, async (req, res) => {
     }
 });
 
-// Get all products (dengan informasi kategori)
+// API Profile
+app.get('/api/profile', verifyAccessToken, async (req, res) => {
+    const userId = req.user.userId;
+    try {
+        const [users] = await promiseDb.query(
+            'SELECT id, uuid, name, email, phone, bio, role, created_at FROM users WHERE id = ?',
+            [userId]
+        );
+        
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Get addresses
+        const [addresses] = await promiseDb.query(
+            'SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC',
+            [userId]
+        );
+        
+        res.json({ 
+            success: true, 
+            user: users[0],
+            addresses 
+        });
+    } catch (err) {
+        console.error('Get profile error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.put('/api/profile', verifyAccessToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { name, phone, bio } = req.body;
+    
+    try {
+        await promiseDb.query(
+            'UPDATE users SET name = ?, phone = ?, bio = ? WHERE id = ?',
+            [name, phone || null, bio || null, userId]
+        );
+        
+        res.json({ success: true, message: 'Profile updated successfully' });
+    } catch (err) {
+        console.error('Update profile error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// API Alamat
+app.get('/api/addresses', verifyAccessToken, async (req, res) => {
+    const userId = req.user.userId;
+    try {
+        const [addresses] = await promiseDb.query(
+            'SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC',
+            [userId]
+        );
+        res.json({ success: true, addresses });
+    } catch (err) {
+        console.error('Get addresses error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/api/addresses', verifyAccessToken, async (req, res) => {
+    const userId = req.user.userId;
+    const { label, recipient_name, phone, address, city, postal_code, is_default } = req.body;
+    
+    if (!recipient_name || !phone || !address || !city) {
+        return res.status(400).json({ error: 'Please fill all required fields' });
+    }
+    
+    const connection = await promiseDb.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        // If this address is default, unset other defaults
+        if (is_default) {
+            await connection.query(
+                'UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?',
+                [userId]
+            );
+        }
+        
+        const uuid = generateUUID();
+        await connection.query(
+            `INSERT INTO user_addresses (uuid, user_id, label, recipient_name, phone, address, city, postal_code, is_default) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [uuid, userId, label || 'Rumah', recipient_name, phone, address, city, postal_code || null, is_default || false]
+        );
+        
+        await connection.commit();
+        res.status(201).json({ success: true, message: 'Address added successfully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Add address error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.put('/api/addresses/:id', verifyAccessToken, async (req, res) => {
+    const userId = req.user.userId;
+    const addressId = req.params.id;
+    const { label, recipient_name, phone, address, city, postal_code, is_default } = req.body;
+    
+    const connection = await promiseDb.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        const [existing] = await connection.query(
+            'SELECT id FROM user_addresses WHERE id = ? AND user_id = ?',
+            [addressId, userId]
+        );
+        
+        if (existing.length === 0) {
+            return res.status(404).json({ error: 'Address not found' });
+        }
+        
+        if (is_default) {
+            await connection.query(
+                'UPDATE user_addresses SET is_default = FALSE WHERE user_id = ? AND id != ?',
+                [userId, addressId]
+            );
+        }
+        
+        await connection.query(
+            `UPDATE user_addresses 
+             SET label = ?, recipient_name = ?, phone = ?, address = ?, city = ?, postal_code = ?, is_default = ?
+             WHERE id = ? AND user_id = ?`,
+            [label || 'Rumah', recipient_name, phone, address, city, postal_code || null, is_default || false, addressId, userId]
+        );
+        
+        await connection.commit();
+        res.json({ success: true, message: 'Address updated successfully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Update address error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        connection.release();
+    }
+});
+
+app.delete('/api/addresses/:id', verifyAccessToken, async (req, res) => {
+    const userId = req.user.userId;
+    const addressId = req.params.id;
+    
+    try {
+        const [result] = await promiseDb.query(
+            'DELETE FROM user_addresses WHERE id = ? AND user_id = ?',
+            [addressId, userId]
+        );
+        
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Address not found' });
+        }
+        
+        res.json({ success: true, message: 'Address deleted successfully' });
+    } catch (err) {
+        console.error('Delete address error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.put('/api/addresses/:id/default', verifyAccessToken, async (req, res) => {
+    const userId = req.user.userId;
+    const addressId = req.params.id;
+    
+    const connection = await promiseDb.getConnection();
+    try {
+        await connection.beginTransaction();
+        
+        await connection.query(
+            'UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?',
+            [userId]
+        );
+        
+        await connection.query(
+            'UPDATE user_addresses SET is_default = TRUE WHERE id = ? AND user_id = ?',
+            [addressId, userId]
+        );
+        
+        await connection.commit();
+        res.json({ success: true, message: 'Default address set successfully' });
+    } catch (err) {
+        await connection.rollback();
+        console.error('Set default address error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        connection.release();
+    }
+});
+
+// API Produk
 app.get('/api/products', async (req, res) => {
     try {
         const [products] = await promiseDb.query(
@@ -245,7 +439,7 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// Get products by category
+// API Produk by Kategori
 app.get('/api/products/category/:categoryId', async (req, res) => {
     const { categoryId } = req.params;
     try {
@@ -270,7 +464,7 @@ app.get('/api/products/category/:categoryId', async (req, res) => {
     }
 });
 
-// Get all categories
+// API Kategori
 app.get('/api/categories', async (req, res) => {
     try {
         const [categories] = await promiseDb.query('SELECT * FROM categories');
@@ -281,6 +475,7 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
+// API Cart
 app.get('/api/cart', verifyAccessToken, async (req, res) => {
     const userId = req.user.userId;
     const cart = tempCarts.get(userId) || [];

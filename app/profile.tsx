@@ -48,14 +48,24 @@ export default function ProfileScreen() {
 
         <View style={styles.menuSection}>
           <Text style={styles.menuSectionTitle}>Akun Saya</Text>
+          
+          {/* EDIT PROFILE */}
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/edit-profile')}>
+            <Icon name="edit" size={22} color="#555" />
+            <Text style={styles.menuItemText}>Edit Profil</Text>
+            <Icon name="chevron-right" size={20} color="#ccc" />
+          </TouchableOpacity>
+
+          {/* ALAMAT SAYA */}
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/addresses')}>
+            <Icon name="location-on" size={22} color="#555" />
+            <Text style={styles.menuItemText}>Alamat Saya</Text>
+            <Icon name="chevron-right" size={20} color="#ccc" />
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/orders')}>
             <Icon name="receipt" size={22} color="#555" />
             <Text style={styles.menuItemText}>Pesanan Saya</Text>
-            <Icon name="chevron-right" size={20} color="#ccc" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Coming Soon')}>
-            <Icon name="location-on" size={22} color="#555" />
-            <Text style={styles.menuItemText}>Alamat Saya</Text>
             <Icon name="chevron-right" size={20} color="#ccc" />
           </TouchableOpacity>
         </View>
