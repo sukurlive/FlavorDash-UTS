@@ -198,7 +198,7 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <RootLayoutContent />
       </SafeAreaView>
     </AuthProvider>
