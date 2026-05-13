@@ -65,7 +65,7 @@ export default function OrdersScreen() {
         <Icon name="receipt" size={64} color="#888" />
         <Text style={styles.emptyText}>Belum Ada Pesanan</Text>
         <Text style={styles.emptySubText}>Belum ada pesanan yang Anda buat</Text>
-        <TouchableOpacity style={styles.shopButton} onPress={() => router.push('/')}>
+        <TouchableOpacity style={styles.shopButton} onPress={() => router.push('/products')}>
           <Text style={styles.shopButtonText}>Mulai Belanja</Text>
         </TouchableOpacity>
       </SafeAreaView>

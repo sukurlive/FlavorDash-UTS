@@ -122,7 +122,7 @@ export default function CartScreen() {
         Alert.alert(
           '🎉 Terima Kasih!',
           `Order #${response.data.order.orderNumber}\nTotal: Rp ${response.data.order.totalAmount.toLocaleString()}\n\nPesanan akan segera dikirim!`,
-          [{ text: 'OK', onPress: () => router.push('/') }]
+          [{ text: 'OK', onPress: () => router.push('/products') }]
         );
         await fetchCart();
       }
@@ -174,7 +174,7 @@ export default function CartScreen() {
         <Icon name="remove-shopping-cart" size={64} color="#888" />
         <Text style={styles.emptyText}>Keranjang Kosong</Text>
         <Text style={styles.emptySubText}>Belum ada produk di keranjang Anda</Text>
-        <TouchableOpacity style={styles.shopButton} onPress={() => router.push('/')}>
+        <TouchableOpacity style={styles.shopButton} onPress={() => router.push('/products')}>
           <Text style={styles.shopButtonText}>Mulai Belanja</Text>
         </TouchableOpacity>
       </View>

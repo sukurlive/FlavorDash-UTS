@@ -154,6 +154,7 @@ function RootLayoutContent() {
           tabBarInactiveTintColor: '#999',
         }}
       >
+        {/* TAB 1: HOME */}
         <Tabs.Screen
           name="index"
           options={{
@@ -162,14 +163,27 @@ function RootLayoutContent() {
             headerTitle: () => <HomeHeader />,
           }}
         />
+        
+        {/* TAB 2: PRODUCTS */}
+        <Tabs.Screen
+          name="products"
+          options={{
+            title: 'Menu',
+            tabBarIcon: ({ color, size }) => <Icon name="restaurant-menu" size={size} color={color} />,
+            headerTitle: () => <HomeHeader />,
+          }}
+        />
+        
+        {/* TAB 3: CART (sembunyikan dari tab bar karena sudah di header) */}
         <Tabs.Screen
           name="cart"
           options={{
-            title: 'Cart',
-            tabBarIcon: ({ color, size }) => <Icon name="shopping-cart" size={size} color={color} />,
+            href: null,
             headerTitle: 'Keranjang Belanja',
           }}
         />
+        
+        {/* TAB 4: PROFILE (sembunyikan dari tab bar, akses via dropdown) */}
         <Tabs.Screen
           name="profile"
           options={{
@@ -177,27 +191,11 @@ function RootLayoutContent() {
             headerTitle: 'Profil Saya',
           }}
         />
-        <Tabs.Screen
-          name="login"
-          options={{
-            href: null,
-            headerTitle: 'Login',
-          }}
-        />
-        <Tabs.Screen
-          name="detail/[id]"
-          options={{
-            href: null,
-            headerTitle: 'Detail Pesanan',
-          }}
-        />
-        <Tabs.Screen
-          name="orders"
-          options={{
-            href: null,
-            headerTitle: 'Pesanan Saya',
-          }}
-        />
+        
+        {/* Halaman lainnya */}
+        <Tabs.Screen name="login" options={{ href: null, headerTitle: 'Login' }} />
+        <Tabs.Screen name="orders" options={{ href: null, headerTitle: 'Pesanan Saya' }} />
+        <Tabs.Screen name="detail/[id]" options={{ href: null, headerTitle: 'Detail Pesanan' }} />
       </Tabs>
     </View>
   );

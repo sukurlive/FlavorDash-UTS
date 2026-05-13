@@ -222,10 +222,14 @@ app.post('/api/logout', verifyAccessToken, async (req, res) => {
     }
 });
 
+// Get all products (dengan informasi kategori)
 app.get('/api/products', async (req, res) => {
     try {
         const [products] = await promiseDb.query(
-            'SELECT id, uuid, name, price, image_url, description, stock FROM products WHERE is_available = TRUE'
+            `SELECT p.*, c.id as category_id, c.name as category_name, c.icon as category_icon 
+             FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
+             WHERE p.is_available = TRUE`
         );
         
         const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -237,6 +241,42 @@ app.get('/api/products', async (req, res) => {
         res.json(productsWithUrl);
     } catch (err) {
         console.error('Products error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get products by category
+app.get('/api/products/category/:categoryId', async (req, res) => {
+    const { categoryId } = req.params;
+    try {
+        const [products] = await promiseDb.query(
+            `SELECT p.*, c.name as category_name 
+             FROM products p
+             LEFT JOIN categories c ON p.category_id = c.id
+             WHERE p.category_id = ? AND p.is_available = TRUE`,
+            [categoryId]
+        );
+        
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const productsWithUrl = products.map(product => ({
+            ...product,
+            image: product.image_url ? `${baseUrl}/uploads/${product.image_url}` : null
+        }));
+        
+        res.json(productsWithUrl);
+    } catch (err) {
+        console.error('Products by category error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get all categories
+app.get('/api/categories', async (req, res) => {
+    try {
+        const [categories] = await promiseDb.query('SELECT * FROM categories');
+        res.json(categories);
+    } catch (err) {
+        console.error('Categories error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
