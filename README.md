@@ -40,7 +40,7 @@ FlavorDash/
 
 ### 1. Setting IP Address
 
-- Ganti API_URL di context/AuthContext.tsx dengan IP laptop Anda.
+- Ganti API_URL di context/AuthContext.tsx dengan IP PC atau laptop Anda.
 - misal : 192.168.100.2 menjadi :
 
 ```bash
@@ -52,9 +52,9 @@ const API_URL = 'http://192.168.100.2:3000';
 - Buat database MySQL flavordash_db
 - file database di folder : /database/flavordash_db.sql
 
-### 3. Jalankan Backend
+### 3. Jalankan Terminal 1 Backend
 
-Jalankan script SQL di backend/server.js (auto setup)
+- Untuk server API (Mendapatkan list produk)
 
 ```bash
 cd backend
@@ -62,7 +62,7 @@ npm install
 npm run dev
 ```
 
-### 4. Jalankan Aplikasi
+### 4. Jalankan Terminal 2 Aplikasi
 
 ```bash
 npm install
