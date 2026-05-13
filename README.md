@@ -10,33 +10,24 @@ Aplikasi mobile untuk katalog makanan dengan fitur keranjang belanja, autentikas
 - ✅ **Route Protection** - Halaman detail pesanan hanya bisa diakses setelah login
 - ✅ **Keranjang Belanja** - Tambah, hapus, update quantity produk
 - ✅ **Checkout** - Pilihan pembayaran transfer bank atau COD
-- ✅ **Auto Refresh** - Cart count di header otomatis update
 - ✅ **User Profile** - Dropdown menu untuk profil dan logout
 - ✅ **Full Screen Support** - SafeAreaView untuk notch dan gesture navigation
-
-## 🛠️ Teknologi
-
-| Stack | Teknologi |
-|-------|-----------|
-| Frontend | React Native + Expo |
-| Backend | Express.js |
-| Database | MySQL |
-| Authentication | JWT (JSON Web Token) |
-| Storage | SecureStore (Native), AsyncStorage (Web) |
-| Icons | React Native Vector Icons |
 
 ## 📁 Struktur Proyek
 ```
 FlavorDash/
-├── app/ # Screens dan navigasi
+├── app/ 
 │ ├── _layout.tsx # Tab navigation & header
 │ ├── index.tsx # Halaman katalog
 │ ├── cart.tsx # Halaman keranjang
+│ ├── addresses.tsx # Halaman menambah alamat
 │ ├── login.tsx # Login/Register
 │ ├── profile.tsx # Profil user
+│ ├── edit-profile.tsx # Edit profile
+│ ├── products.tsx # Halaman produk
 │ ├── orders.tsx # Riwayat pesanan
 │ └── detail/[id].tsx # Detail pesanan
-├── backend/ # Express.js server
+├── backend/ # Untuk server API
 │ ├── server.js # API endpoints
 │ ├── uploads/ # Gambar produk
 │ └── .env # Konfigurasi
@@ -49,16 +40,22 @@ FlavorDash/
 
 ### 1. Setting IP Address
 
-Ganti API_URL di context/AuthContext.tsx dengan IP laptop Anda.
+- Ganti API_URL di context/AuthContext.tsx dengan IP laptop Anda.
+- misal : 192.168.100.2 menjadi :
+
+```bash
+const API_URL = 'http://192.168.100.2:3000';
+```
 
 ### 2. Database
 
 - Buat database MySQL flavordash_db
-- file database di /database/flavordash_db.sql
+- file database di folder : /database/flavordash_db.sql
 
 ### 3. Jalankan Backend
 
 Jalankan script SQL di backend/server.js (auto setup)
+
 ```bash
 cd backend
 npm install
@@ -66,6 +63,7 @@ npm run dev
 ```
 
 ### 4. Jalankan Aplikasi
+
 ```bash
 npm install
 npx expo start -c
