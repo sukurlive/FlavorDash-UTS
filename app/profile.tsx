@@ -68,6 +68,12 @@ export default function ProfileScreen() {
             <Text style={styles.menuItemText}>Pesanan Saya</Text>
             <Icon name="chevron-right" size={20} color="#ccc" />
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/maps')}>
+            <Icon name="map" size={22} color="#555" />
+            <Text style={styles.menuItemText}>Lokasi Restoran</Text>
+            <Icon name="chevron-right" size={20} color="#ccc" />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

@@ -1,3 +1,4 @@
+// app/login.tsx
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Alert, StyleSheet, ActivityIndicator, Switch, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,9 +15,14 @@ export default function LoginScreen() {
   const { login, register, isAuthenticated, user } = useAuth();
   const router = useRouter();
 
+  // ========== PERBAIKAN: Redirect berdasarkan role ==========
   useEffect(() => {
     if (isAuthenticated && user) {
-      router.replace('/');
+      if (user.role === 'admin') {
+        router.replace('/admin');
+      } else {
+        router.replace('/');
+      }
     }
   }, [isAuthenticated, user]);
 
@@ -45,6 +51,7 @@ export default function LoginScreen() {
     
     if (result.success) {
       Alert.alert('Sukses', isLogin ? `Selamat datang!` : 'Registrasi berhasil!');
+      // Redirect akan di handle oleh useEffect
     } else {
       Alert.alert(isLogin ? 'Login Gagal' : 'Registrasi Gagal', result.error);
     }
@@ -87,6 +94,12 @@ export default function LoginScreen() {
             <Text style={styles.buttonText}>{isLogin ? 'Login' : 'Register'}</Text>
           </TouchableOpacity>
         )}
+        
+        <Text style={styles.demo}>
+          {isLogin 
+            ? 'Demo : user@example.com / password123  |  admin@example.com / password123' 
+            : 'Minimal password 6 karakter'}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

@@ -1,12 +1,25 @@
-import React from 'react';
+// app/index.tsx
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
 
 export default function HomeScreen() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
+
+  // ========== REDIRECT ADMIN KE ADMIN ==========
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'admin') {
+      router.replace('/admin');
+    }
+  }, [isAuthenticated, user]);
+
+  // Jika admin, tidak tampilkan halaman home
+  if (isAuthenticated && user?.role === 'admin') {
+    return null;
+  }
 
   const features = [
     { icon: 'restaurant-menu', title: 'Katalog Makanan', description: 'Jelajahi berbagai pilihan makanan dan minuman favorit Anda' },

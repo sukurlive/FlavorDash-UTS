@@ -52,6 +52,16 @@ function HomeHeader() {
     setShowDropdown(false);
   };
 
+  const navigateToMaps = () => {
+    setShowDropdown(false);
+    router.push('/maps');
+  };
+
+  const navigateToAdmin = () => {
+    setShowDropdown(false);
+    router.push('/admin');
+  };
+
   return (
     <View style={[styles.headerContainer, { paddingTop: insets.top > 0 ? 0 : 0 }]}>
       <TouchableOpacity onPress={goToHome} activeOpacity={0.7} style={styles.logoContainer}>
@@ -189,6 +199,7 @@ function RootLayoutContent() {
         <Tabs.Screen name="edit-profile" options={{ href: null, headerTitle: 'Edit Profil' }} />
         <Tabs.Screen name="addresses" options={{ href: null, headerTitle: 'Alamat Saya' }} />
         <Tabs.Screen name="detail/[id]" options={{ href: null, headerTitle: 'Detail Pesanan' }} />
+        <Tabs.Screen name="maps" options={{ href: null, headerTitle: 'Lokasi Restoran' }} />
       </Tabs>
     </View>
   );

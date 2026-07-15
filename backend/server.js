@@ -70,6 +70,35 @@ async function verifyAccessToken(req, res, next) {
     }
 }
 
+// ========== ADMIN MIDDLEWARE ==========
+async function verifyAdmin(req, res, next) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Access token required' });
+    }
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'FlavorDashSecret2026');
+        if (decoded.type !== 'access') {
+            return res.status(401).json({ error: 'Invalid token type' });
+        }
+        
+        // Cek apakah user adalah admin
+        const [users] = await promiseDb.query('SELECT role FROM users WHERE id = ?', [decoded.userId]);
+        if (users.length === 0 || users[0].role !== 'admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
+        req.user = decoded;
+        next();
+    } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+            return res.status(401).json({ error: 'Token expired' });
+        }
+        return res.status(403).json({ error: 'Invalid token' });
+    }
+}
+
 let tempCarts = new Map();
 
 async function setupDatabase() {
@@ -85,6 +114,8 @@ async function setupDatabase() {
                 email VARCHAR(100) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
                 role ENUM('user', 'admin') DEFAULT 'user',
+                phone VARCHAR(20),
+                bio TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )
@@ -112,7 +143,36 @@ async function setupDatabase() {
                 description TEXT,
                 stock INT DEFAULT 10,
                 is_available BOOLEAN DEFAULT TRUE,
+                category_id INT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        
+        await promiseDb.query(`
+            CREATE TABLE IF NOT EXISTS categories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                uuid VARCHAR(36) NOT NULL UNIQUE,
+                name VARCHAR(50) NOT NULL,
+                icon VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        
+        await promiseDb.query(`
+            CREATE TABLE IF NOT EXISTS user_addresses (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                uuid VARCHAR(36) NOT NULL UNIQUE,
+                user_id INT NOT NULL,
+                label VARCHAR(50) DEFAULT 'Rumah',
+                recipient_name VARCHAR(100) NOT NULL,
+                phone VARCHAR(20) NOT NULL,
+                address TEXT NOT NULL,
+                city VARCHAR(100) NOT NULL,
+                postal_code VARCHAR(10),
+                is_default BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         `);
         
@@ -147,16 +207,67 @@ async function setupDatabase() {
             )
         `);
         
-        const [existingProducts] = await promiseDb.query('SELECT id FROM products LIMIT 1');        
-        const [existingUser] = await promiseDb.query('SELECT id FROM users WHERE email = ?', ['user@example.com']);
+        // Insert sample categories
+        const [existingCategories] = await promiseDb.query('SELECT id FROM categories LIMIT 1');
+        if (existingCategories.length === 0) {
+            await promiseDb.query(`
+                INSERT INTO categories (uuid, name, icon) VALUES 
+                (UUID(), 'Makanan', 'restaurant'),
+                (UUID(), 'Minuman', 'local-cafe'),
+                (UUID(), 'Snack', 'fastfood')
+            `);
+            console.log('✅ Sample categories inserted');
+        }
         
-        console.log('Database setup complete');
+        // Insert sample products
+        const [existingProducts] = await promiseDb.query('SELECT id FROM products LIMIT 1');
+        if (existingProducts.length === 0) {
+            const products = [
+                ['🍛 Nasi Goreng Spesial', 35000, 'nasi-goreng.jpg', 'Nasi goreng dengan telur mata sapi, ayam suwir', 20, 1],
+                ['🍜 Mie Ayam Jamur', 25000, 'mie-ayam.jpg', 'Mie ayam dengan topping jamur, pangsit', 15, 1],
+                ['🍢 Sate Ayam Madura', 40000, 'sate-ayam.jpg', '10 tusuk sate ayam dengan bumbu kacang', 10, 1],
+                ['🥘 Rendang Padang', 45000, 'rendang.jpg', 'Daging sapi dimasak dengan bumbu rendang', 8, 1],
+                ['🥗 Gado-Gado', 28000, 'gado-gado.jpg', 'Sayuran rebus dengan bumbu kacang', 25, 1],
+                ['🍹 Es Jeruk Segar', 12000, 'es-jeruk.jpg', 'Jeruk peras segar dengan es batu', 50, 2]
+            ];
+            for (const p of products) {
+                await promiseDb.query(
+                    'INSERT INTO products (uuid, name, price, image_url, description, stock, category_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    [generateUUID(), p[0], p[1], p[2], p[3], p[4], p[5]]
+                );
+            }
+            console.log('✅ Sample products inserted');
+        }
+        
+        // Insert sample user
+        const [existingUser] = await promiseDb.query('SELECT id FROM users WHERE email = ?', ['user@example.com']);
+        if (existingUser.length === 0) {
+            const hashedPassword = await bcrypt.hash('password123', 10);
+            await promiseDb.query(
+                'INSERT INTO users (uuid, name, email, password, role) VALUES (?, ?, ?, ?, ?)',
+                [generateUUID(), 'Demo User', 'user@example.com', hashedPassword, 'user']
+            );
+            console.log('✅ Sample user created: user@example.com / password123');
+        }
+        
+        // Insert sample admin (jika belum ada)
+        const [existingAdmin] = await promiseDb.query('SELECT id FROM users WHERE email = ?', ['admin@flavordash.com']);
+        if (existingAdmin.length === 0) {
+            const hashedPassword = await bcrypt.hash('admin123', 10);
+            await promiseDb.query(
+                'INSERT INTO users (uuid, name, email, password, role) VALUES (?, ?, ?, ?, ?)',
+                [generateUUID(), 'Admin FlavorDash', 'admin@flavordash.com', hashedPassword, 'admin']
+            );
+            console.log('✅ Admin user created: admin@flavordash.com / admin123');
+        }
+        
+        console.log('✅ Database setup complete');
     } catch (err) {
         console.error('Database setup error:', err);
     }
 }
 
-// API Auth
+// ========== AUTH ENDPOINTS ==========
 app.post('/api/register', async (req, res) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
@@ -223,7 +334,7 @@ app.post('/api/logout', verifyAccessToken, async (req, res) => {
     }
 });
 
-// API Profile
+// ========== PROFILE ENDPOINTS ==========
 app.get('/api/profile', verifyAccessToken, async (req, res) => {
     const userId = req.user.userId;
     try {
@@ -236,7 +347,6 @@ app.get('/api/profile', verifyAccessToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
         
-        // Get addresses
         const [addresses] = await promiseDb.query(
             'SELECT * FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at DESC',
             [userId]
@@ -270,7 +380,7 @@ app.put('/api/profile', verifyAccessToken, async (req, res) => {
     }
 });
 
-// API Alamat
+// ========== ADDRESS ENDPOINTS ==========
 app.get('/api/addresses', verifyAccessToken, async (req, res) => {
     const userId = req.user.userId;
     try {
@@ -297,12 +407,8 @@ app.post('/api/addresses', verifyAccessToken, async (req, res) => {
     try {
         await connection.beginTransaction();
         
-        // If this address is default, unset other defaults
         if (is_default) {
-            await connection.query(
-                'UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?',
-                [userId]
-            );
+            await connection.query('UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?', [userId]);
         }
         
         const uuid = generateUUID();
@@ -332,20 +438,13 @@ app.put('/api/addresses/:id', verifyAccessToken, async (req, res) => {
     try {
         await connection.beginTransaction();
         
-        const [existing] = await connection.query(
-            'SELECT id FROM user_addresses WHERE id = ? AND user_id = ?',
-            [addressId, userId]
-        );
-        
+        const [existing] = await connection.query('SELECT id FROM user_addresses WHERE id = ? AND user_id = ?', [addressId, userId]);
         if (existing.length === 0) {
             return res.status(404).json({ error: 'Address not found' });
         }
         
         if (is_default) {
-            await connection.query(
-                'UPDATE user_addresses SET is_default = FALSE WHERE user_id = ? AND id != ?',
-                [userId, addressId]
-            );
+            await connection.query('UPDATE user_addresses SET is_default = FALSE WHERE user_id = ? AND id != ?', [userId, addressId]);
         }
         
         await connection.query(
@@ -371,15 +470,10 @@ app.delete('/api/addresses/:id', verifyAccessToken, async (req, res) => {
     const addressId = req.params.id;
     
     try {
-        const [result] = await promiseDb.query(
-            'DELETE FROM user_addresses WHERE id = ? AND user_id = ?',
-            [addressId, userId]
-        );
-        
+        const [result] = await promiseDb.query('DELETE FROM user_addresses WHERE id = ? AND user_id = ?', [addressId, userId]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Address not found' });
         }
-        
         res.json({ success: true, message: 'Address deleted successfully' });
     } catch (err) {
         console.error('Delete address error:', err);
@@ -394,17 +488,8 @@ app.put('/api/addresses/:id/default', verifyAccessToken, async (req, res) => {
     const connection = await promiseDb.getConnection();
     try {
         await connection.beginTransaction();
-        
-        await connection.query(
-            'UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?',
-            [userId]
-        );
-        
-        await connection.query(
-            'UPDATE user_addresses SET is_default = TRUE WHERE id = ? AND user_id = ?',
-            [addressId, userId]
-        );
-        
+        await connection.query('UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?', [userId]);
+        await connection.query('UPDATE user_addresses SET is_default = TRUE WHERE id = ? AND user_id = ?', [addressId, userId]);
         await connection.commit();
         res.json({ success: true, message: 'Default address set successfully' });
     } catch (err) {
@@ -416,13 +501,13 @@ app.put('/api/addresses/:id/default', verifyAccessToken, async (req, res) => {
     }
 });
 
-// API Produk
+// ========== PRODUCTS & CATEGORIES ==========
 app.get('/api/products', async (req, res) => {
     try {
         const [products] = await promiseDb.query(
             `SELECT p.*, c.id as category_id, c.name as category_name, c.icon as category_icon 
-             FROM products p
-             LEFT JOIN categories c ON p.category_id = c.id
+             FROM products p 
+             LEFT JOIN categories c ON p.category_id = c.id 
              WHERE p.is_available = TRUE`
         );
         
@@ -439,14 +524,13 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// API Produk by Kategori
 app.get('/api/products/category/:categoryId', async (req, res) => {
     const { categoryId } = req.params;
     try {
         const [products] = await promiseDb.query(
             `SELECT p.*, c.name as category_name 
-             FROM products p
-             LEFT JOIN categories c ON p.category_id = c.id
+             FROM products p 
+             LEFT JOIN categories c ON p.category_id = c.id 
              WHERE p.category_id = ? AND p.is_available = TRUE`,
             [categoryId]
         );
@@ -464,7 +548,6 @@ app.get('/api/products/category/:categoryId', async (req, res) => {
     }
 });
 
-// API Kategori
 app.get('/api/categories', async (req, res) => {
     try {
         const [categories] = await promiseDb.query('SELECT * FROM categories');
@@ -475,7 +558,7 @@ app.get('/api/categories', async (req, res) => {
     }
 });
 
-// API Cart
+// ========== CART ENDPOINTS ==========
 app.get('/api/cart', verifyAccessToken, async (req, res) => {
     const userId = req.user.userId;
     const cart = tempCarts.get(userId) || [];
@@ -591,14 +674,204 @@ app.get('/api/orders/:orderId', verifyAccessToken, async (req, res) => {
     res.json({ success: true, order: orders[0], items });
 });
 
-// Start server
+// ========== ADMIN ENDPOINTS ==========
+
+// GET semua orders (termasuk user info) - Admin only
+app.get('/api/admin/orders', verifyAdmin, async (req, res) => {
+    try {
+        const [orders] = await promiseDb.query(
+            `SELECT o.*, 
+                u.name as user_name, u.email as user_email,
+                (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) as item_count
+             FROM orders o
+             JOIN users u ON o.user_id = u.id
+             ORDER BY o.created_at DESC`
+        );
+        res.json({ success: true, orders });
+    } catch (err) {
+        console.error('Admin orders error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET detail order oleh admin
+app.get('/api/admin/orders/:id', verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [orders] = await promiseDb.query(
+            `SELECT o.*, 
+                u.name as user_name, u.email as user_email 
+             FROM orders o 
+             JOIN users u ON o.user_id = u.id 
+             WHERE o.id = ?`,
+            [id]
+        );
+        
+        if (orders.length === 0) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        
+        const [items] = await promiseDb.query(
+            `SELECT oi.*, p.name, p.image_url as image 
+             FROM order_items oi 
+             JOIN products p ON oi.product_id = p.id 
+             WHERE oi.order_id = ?`,
+            [id]
+        );
+        
+        res.json({ success: true, order: orders[0], items });
+    } catch (err) {
+        console.error('Admin order detail error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// UPDATE status order oleh admin
+app.put('/api/admin/orders/:id/status', verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    try {
+        await promiseDb.query(
+            'UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?',
+            [status, id]
+        );
+        
+        res.json({ success: true, message: 'Status updated successfully' });
+    } catch (err) {
+        console.error('Update order status error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET all users (Admin only)
+app.get('/api/admin/users', verifyAdmin, async (req, res) => {
+    try {
+        const [users] = await promiseDb.query(
+            'SELECT id, uuid, name, email, role, phone, bio, created_at FROM users ORDER BY created_at DESC'
+        );
+        res.json({ success: true, users });
+    } catch (err) {
+        console.error('Admin users error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// UPDATE user role (Admin only)
+app.put('/api/admin/users/:id/role', verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role' });
+    }
+    
+    try {
+        await promiseDb.query('UPDATE users SET role = ? WHERE id = ?', [role, id]);
+        res.json({ success: true, message: 'User role updated successfully' });
+    } catch (err) {
+        console.error('Update user role error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET all products (Admin only - including unavailable)
+app.get('/api/admin/products', verifyAdmin, async (req, res) => {
+    try {
+        const [products] = await promiseDb.query(
+            `SELECT p.*, c.name as category_name 
+             FROM products p 
+             LEFT JOIN categories c ON p.category_id = c.id 
+             ORDER BY p.created_at DESC`
+        );
+        
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const productsWithUrl = products.map(product => ({
+            ...product,
+            image: product.image_url ? `${baseUrl}/uploads/${product.image_url}` : null
+        }));
+        
+        res.json({ success: true, products: productsWithUrl });
+    } catch (err) {
+        console.error('Admin products error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// UPDATE product (Admin only)
+app.put('/api/admin/products/:id', verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { name, price, description, stock, is_available, category_id, image_url } = req.body;
+    
+    try {
+        await promiseDb.query(
+            `UPDATE products 
+             SET name = ?, price = ?, description = ?, stock = ?, is_available = ?, category_id = ?, image_url = ?
+             WHERE id = ?`,
+            [name, price, description, stock, is_available, category_id, image_url, id]
+        );
+        
+        res.json({ success: true, message: 'Product updated successfully' });
+    } catch (err) {
+        console.error('Update product error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// CREATE product (Admin only)
+app.post('/api/admin/products', verifyAdmin, async (req, res) => {
+    const { name, price, description, stock, is_available, category_id, image_url } = req.body;
+    
+    if (!name || !price) {
+        return res.status(400).json({ error: 'Name and price are required' });
+    }
+    
+    try {
+        const uuid = generateUUID();
+        await promiseDb.query(
+            `INSERT INTO products (uuid, name, price, description, stock, is_available, category_id, image_url) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [uuid, name, price, description || '', stock || 10, is_available !== undefined ? is_available : true, category_id || null, image_url || null]
+        );
+        
+        res.status(201).json({ success: true, message: 'Product created successfully' });
+    } catch (err) {
+        console.error('Create product error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// DELETE product (Admin only)
+app.delete('/api/admin/products/:id', verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const [result] = await promiseDb.query('DELETE FROM products WHERE id = ?', [id]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+        res.json({ success: true, message: 'Product deleted successfully' });
+    } catch (err) {
+        console.error('Delete product error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ========== START SERVER ==========
 async function startServer() {
     await setupDatabase();
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`\nServer running on http://localhost:${PORT}`);
-        console.log(`Uploads folder: ${path.join(__dirname, 'uploads')}`);
-        console.log(`Sample login: user@example.com / password123\n`);
+        console.log(`\n🚀 Server running on http://localhost:${PORT}`);
+        console.log(`📁 Uploads folder: ${path.join(__dirname, 'uploads')}`);
+        console.log(`\n🔑 Sample Login:`);
+        console.log(`   User:  user@example.com / password123`);
+        console.log(`   Admin: admin@example.com / password123\n`);
     });
 }
 
