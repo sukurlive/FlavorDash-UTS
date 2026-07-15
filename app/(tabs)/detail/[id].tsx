@@ -1,13 +1,11 @@
-// app/detail/[id].tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Redirect } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useAuth, API_URL, getStorageItem } from '../../context/AuthContext';  // ✅ PAKAI getStorageItem
+import { useAuth, API_URL, getStorageItem } from '../../../context/AuthContext';
 import axios from 'axios';
-import * as ImagePicker from 'expo-image-picker';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 
 export default function DetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -17,8 +15,9 @@ export default function DetailScreen() {
   const [loading, setLoading] = useState(true);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [showCamera, setShowCamera] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<any>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -26,10 +25,8 @@ export default function DetailScreen() {
   }, [isAuthenticated, id]);
 
   const fetchOrderDetail = async () => {
-    // ✅ PAKAI getStorageItem (bukan getItem)
     const token = await getStorageItem('accessToken');
     if (!token) {
-      console.log('No token found');
       setLoading(false);
       return;
     }
@@ -54,13 +51,14 @@ export default function DetailScreen() {
         return;
       }
     }
+    setPhoto(null);
     setShowCamera(true);
   };
 
   const handlePhotoTaken = (photoData: any) => {
-    setPhoto(photoData.uri);
+    setPhoto(photoData);
     setShowCamera(false);
-    Alert.alert('✅ Berhasil!', 'Foto bukti penerimaan telah diambil.');
+    Alert.alert('✅ Berhasil!', 'Foto berhasil diambil. Silakan kirim.');
   };
 
   const handleRetakePhoto = () => {
@@ -69,11 +67,41 @@ export default function DetailScreen() {
   };
 
   const handleSubmitPhoto = async () => {
-    if (!photo) return;
-    Alert.alert('📤 Kirim Bukti', 'Apakah Anda yakin foto ini sudah benar?', [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Kirim', onPress: () => { Alert.alert('✅ Sukses!', 'Bukti penerimaan berhasil dikirim.'); setPhoto(null); } }
-    ]);
+    if (!photo || !order?.id) return;
+    
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      // Struktur FormData khusus untuk React Native
+      formData.append('proof_image', {
+        uri: photo.uri,
+        name: `bukti_${order.order_number}.jpg`,
+        type: 'image/jpeg',
+      } as any);
+
+      const token = await getStorageItem('accessToken');
+      const response = await axios.post(
+        `${API_URL}/api/orders/${order.id}/upload-proof`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      if (response.data.success) {
+        Alert.alert('✅ Sukses!', 'Bukti penerimaan berhasil dikirim.');
+        setPhoto(null);
+        fetchOrderDetail(); // Refresh data untuk menampilkan gambar yang sudah diupload
+      }
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      Alert.alert('❌ Gagal', error.response?.data?.error || 'Gagal mengupload bukti');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isAuthenticated) return <Redirect href="/login" />;
@@ -138,13 +166,6 @@ export default function DetailScreen() {
             <Text style={styles.totalAmount}>Rp {order?.total_amount?.toLocaleString() || 0}</Text>
           </View>
 
-          {order?.notes && (
-            <View style={styles.addressBox}>
-              <Text style={styles.addressTitle}>📦 Alamat Pengiriman:</Text>
-              <Text style={styles.addressText}>{order.notes}</Text>
-            </View>
-          )}
-
           {items.length > 0 && (
             <View style={styles.itemsBox}>
               <Text style={styles.itemsTitle}>🛒 Item Pesanan:</Text>
@@ -162,9 +183,19 @@ export default function DetailScreen() {
           {(order?.status === 'processing' || order?.status === 'completed') && (
             <View style={styles.evidenceSection}>
               <Text style={styles.evidenceTitle}>📸 Bukti Penerimaan</Text>
+              
+              {/* Jika sudah ada bukti yang diupload sebelumnya, tampilkan */}
+              {order?.proof_image && !photo && (
+                <View style={styles.photoPreviewContainer}>
+                  <Image source={{ uri: `${API_URL}${order.proof_image}` }} style={styles.photoPreview} />
+                  <Text style={{color: '#4CAF50', fontWeight: 'bold', marginTop: 8}}>✅ Bukti sudah terkirim</Text>
+                </View>
+              )}
+
+              {/* Jika sedang proses ambil foto */}
               {photo ? (
                 <View style={styles.photoPreviewContainer}>
-                  <Image source={{ uri: photo }} style={styles.photoPreview} />
+                  <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
                   <View style={styles.photoActions}>
                     <TouchableOpacity style={styles.retakeButton} onPress={handleRetakePhoto}>
                       <Icon name="camera" size={18} color="#FFF" />
@@ -176,12 +207,12 @@ export default function DetailScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              ) : (
+              ) : !order?.proof_image ? (
                 <TouchableOpacity style={styles.cameraButton} onPress={handleTakePhoto}>
                   <Icon name="camera-alt" size={28} color="#FFF" />
                   <Text style={styles.cameraButtonText}>📷 Ambil Bukti Penerimaan</Text>
                 </TouchableOpacity>
-              )}
+              ) : null}
             </View>
           )}
 
@@ -192,23 +223,40 @@ export default function DetailScreen() {
         </View>
       </ScrollView>
 
+      {/* Tampilan Kamera Penuh Layar */}
       {showCamera && (
         <View style={styles.cameraContainer}>
-          <CameraView style={styles.camera} facing="back" onCameraReady={() => setIsCameraReady(true)}>
+          <CameraView 
+            ref={cameraRef} 
+            style={styles.camera} 
+            facing="back" 
+            onCameraReady={() => setIsCameraReady(true)}
+          >
             <View style={styles.cameraControls}>
               <TouchableOpacity style={styles.closeCameraButton} onPress={() => setShowCamera(false)}>
                 <Icon name="close" size={28} color="#FFF" />
               </TouchableOpacity>
+              
+              {/* ✅ TOMBOL AMBIL FOTO ASLI */}
               <TouchableOpacity 
                 style={styles.captureButton} 
-                onPress={() => {
-                  if (!isCameraReady) return;
-                  const dummyPhoto = { uri: 'https://picsum.photos/400/400' };
-                  handlePhotoTaken(dummyPhoto);
+                onPress={async () => {
+                  if (!cameraRef.current || !isCameraReady) return;
+                  try {
+                    const photoData = await cameraRef.current.takePictureAsync({
+                      quality: 0.7, // Kompresi agar ukuran file tidak terlalu besar
+                      base64: false,
+                    });
+                    handlePhotoTaken(photoData);
+                  } catch (error) {
+                    console.error("Error taking photo:", error);
+                    Alert.alert("Error", "Gagal mengambil foto");
+                  }
                 }}
               >
                 <View style={styles.captureButtonInner} />
               </TouchableOpacity>
+              
               <View style={styles.cameraSpacer} />
             </View>
           </CameraView>
@@ -218,7 +266,9 @@ export default function DetailScreen() {
   );
 }
 
+// ... (Styles tetap sama seperti kode kamu sebelumnya) ...
 const styles = StyleSheet.create({
+  // ... paste styles kamu di sini ...
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: { padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E0E0E0' },
   headerTitle: { fontSize: 18, fontWeight: 'bold' },
@@ -230,9 +280,6 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 14, color: '#666' }, infoValue: { fontSize: 14, color: '#333', fontWeight: '500' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }, statusText: { fontSize: 12, fontWeight: '600' },
   totalAmount: { fontSize: 18, fontWeight: 'bold', color: '#4CAF50' },
-  addressBox: { backgroundColor: '#E8F5E9', padding: 12, borderRadius: 10, marginTop: 12, marginBottom: 8 },
-  addressTitle: { fontSize: 12, fontWeight: 'bold', color: '#2E7D32', marginBottom: 4 },
-  addressText: { fontSize: 11, color: '#1B5E20', lineHeight: 16 },
   itemsBox: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 10, marginTop: 16, marginBottom: 20 },
   itemsTitle: { fontSize: 14, fontWeight: 'bold', marginBottom: 8, color: '#333' },
   orderItem: { marginBottom: 8, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#E0E0E0' },
@@ -251,7 +298,7 @@ const styles = StyleSheet.create({
   backButton: { backgroundColor: '#4CAF50', paddingVertical: 12, borderRadius: 10, alignItems: 'center', marginTop: 16, flexDirection: 'row', justifyContent: 'center' },
   backButtonText: { color: '#FFF', fontSize: 14, fontWeight: 'bold' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }, loadingText: { marginTop: 12, fontSize: 14, color: '#888' },
-  cameraContainer: { flex: 1, backgroundColor: '#000', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  cameraContainer: { flex: 1, backgroundColor: '#000', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 },
   camera: { flex: 1 },
   cameraControls: { flex: 1, justifyContent: 'space-between', padding: 20 },
   closeCameraButton: { alignSelf: 'flex-start', padding: 8 },
